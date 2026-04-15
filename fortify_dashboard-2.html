@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fortify Health — Programme Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --teal:       #0D7B6E;
+    --teal-light: #12A08F;
+    --teal-dim:   #0A5F55;
+    --cream:      #F8F4EE;
+    --warm-white: #FDFBF7;
+    --ink:        #1A1A2E;
+    --ink-mid:    #3A3A52;
+    --ink-soft:   #6B6B82;
+    --gold:       #C9883B;
+    --gold-light: #E8A85A;
+    --red-soft:   #C94B4B;
+    --green-soft: #2E8B6B;
+    --border:     rgba(13,123,110,0.15);
+    --card-bg:    rgba(255,253,247,0.9);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--ink);
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    background: var(--ink);
+    padding: 0 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    border-bottom: 3px solid var(--teal);
+  }
+  .header-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .header-logo {
+    width: 34px; height: 34px;
+    background: var(--teal);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'DM Serif Display', serif;
+    font-size: 18px; color: #fff; font-weight: bold;
+  }
+  .header-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.15rem;
+    color: #fff;
+    letter-spacing: 0.01em;
+  }
+  .header-sub {
+    font-size: 0.72rem;
+    color: var(--teal-light);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.78rem;
+    color: #aaa;
+  }
+  .live-dot {
+    width: 8px; height: 8px;
+    background: var(--teal-light);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* ── CONTROLS ── */
+  .controls {
+    background: var(--warm-white);
+    border-bottom: 1px solid var(--border);
+    padding: 1rem 2.5rem;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+  .ctrl-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .ctrl-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--ink-soft);
+    font-weight: 600;
+  }
+  .ctrl-btn {
+    padding: 6px 14px;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    border-radius: 20px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--ink-mid);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .ctrl-btn:hover { border-color: var(--teal); color: var(--teal); }
+  .ctrl-btn.active { background: var(--teal); border-color: var(--teal); color: #fff; }
+  .ctrl-select {
+    padding: 6px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    background: transparent;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.78rem;
+    color: var(--ink-mid);
+    cursor: pointer;
+    outline: none;
+  }
+  .ctrl-select:focus { border-color: var(--teal); }
+
+  /* ── MAIN LAYOUT ── */
+  .main {
+    padding: 2rem 2.5rem;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  /* ── KPI ROW ── */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .kpi-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.25rem 1.4rem;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(13,123,110,0.1); }
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--teal);
+  }
+  .kpi-card.gold::before { background: var(--gold); }
+  .kpi-card.red::before { background: var(--red-soft); }
+  .kpi-card.green::before { background: var(--green-soft); }
+  .kpi-icon {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+  .kpi-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--ink-soft);
+    font-weight: 600;
+    margin-bottom: 0.3rem;
+  }
+  .kpi-value {
+    font-family: 'DM Serif Display', serif;
+    font-size: 2rem;
+    color: var(--ink);
+    line-height: 1;
+    margin-bottom: 0.3rem;
+  }
+  .kpi-delta {
+    font-size: 0.72rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .kpi-delta.up { color: var(--green-soft); }
+  .kpi-delta.down { color: var(--red-soft); }
+  .kpi-sub { font-size: 0.68rem; color: var(--ink-soft); margin-top: 2px; }
+
+  /* ── CHART GRID ── */
+  .chart-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  .chart-grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  .chart-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.4rem;
+  }
+  .chart-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 1.2rem;
+  }
+  .chart-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.05rem;
+    color: var(--ink);
+    margin-bottom: 2px;
+  }
+  .chart-subtitle {
+    font-size: 0.7rem;
+    color: var(--ink-soft);
+    font-weight: 400;
+  }
+  .chart-badge {
+    font-size: 0.66rem;
+    padding: 3px 9px;
+    border-radius: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  .badge-teal { background: rgba(13,123,110,0.1); color: var(--teal); }
+  .badge-gold { background: rgba(201,136,59,0.12); color: var(--gold); }
+  canvas { width: 100% !important; }
+
+  /* ── REGION TABLE ── */
+  .table-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.4rem;
+    margin-bottom: 1rem;
+  }
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+  }
+  .data-table th {
+    text-align: left;
+    padding: 8px 10px;
+    font-size: 0.66rem;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--ink-soft);
+    font-weight: 600;
+    border-bottom: 1.5px solid var(--border);
+  }
+  .data-table td {
+    padding: 10px 10px;
+    border-bottom: 1px solid rgba(13,123,110,0.06);
+    color: var(--ink-mid);
+    vertical-align: middle;
+  }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: rgba(13,123,110,0.03); }
+  .region-dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  .progress-bar-wrap {
+    background: rgba(13,123,110,0.1);
+    border-radius: 4px;
+    height: 6px;
+    width: 100%;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    background: var(--teal);
+    transition: width 0.6s ease;
+  }
+  .tag {
+    font-size: 0.65rem;
+    padding: 2px 7px;
+    border-radius: 8px;
+    font-weight: 600;
+  }
+  .tag-green { background: rgba(46,139,107,0.12); color: var(--green-soft); }
+  .tag-amber { background: rgba(201,136,59,0.12); color: var(--gold); }
+  .tag-red   { background: rgba(201,75,75,0.12);  color: var(--red-soft); }
+
+  /* ── FOOTER ── */
+  .footer {
+    text-align: center;
+    padding: 1.5rem 2.5rem;
+    font-size: 0.7rem;
+    color: var(--ink-soft);
+    border-top: 1px solid var(--border);
+    margin-top: 0.5rem;
+  }
+
+  @media (max-width: 900px) {
+    .kpi-row { grid-template-columns: repeat(2,1fr); }
+    .chart-grid, .chart-grid-3 { grid-template-columns: 1fr; }
+    .main, .controls, .header { padding-left: 1rem; padding-right: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-brand">
+    <div class="header-logo">F</div>
+    <div>
+      <div class="header-title">Fortify Health</div>
+      <div class="header-sub">Programme Metrics Dashboard</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="live-dot"></div>
+    Last updated: April 2026
+  </div>
+</header>
+
+<!-- CONTROLS -->
+<div class="controls">
+  <div class="ctrl-group">
+    <span class="ctrl-label">Year Range</span>
+    <button class="ctrl-btn" onclick="setRange(3)">3 yr</button>
+    <button class="ctrl-btn active" onclick="setRange(5)">5 yr</button>
+    <button class="ctrl-btn" onclick="setRange(8)">8 yr</button>
+  </div>
+  <div class="ctrl-group">
+    <span class="ctrl-label">Region</span>
+    <select class="ctrl-select" id="regionSelect" onchange="updateRegionFocus()">
+      <option value="all">All Regions</option>
+      <option value="South Asia">South Asia</option>
+      <option value="Sub-Saharan Africa">Sub-Saharan Africa</option>
+      <option value="East Africa">East Africa</option>
+      <option value="West Africa">West Africa</option>
+      <option value="Southeast Asia">Southeast Asia</option>
+    </select>
+  </div>
+  <div class="ctrl-group">
+    <span class="ctrl-label">Metric</span>
+    <button class="ctrl-btn active" onclick="setMetric('anaemia', this)">Anaemia Rate</button>
+    <button class="ctrl-btn" onclick="setMetric('coverage', this)">LSFF Coverage</button>
+    <button class="ctrl-btn" onclick="setMetric('compliance', this)">Compliance</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- KPI ROW -->
+  <div class="kpi-row">
+    <div class="kpi-card">
+      <div class="kpi-icon">🩸</div>
+      <div class="kpi-label">Avg. Anaemia Prevalence</div>
+      <div class="kpi-value" id="kpi1">38.4%</div>
+      <div class="kpi-delta down" id="kpi1d">↓ 9.2 pp since 2020</div>
+      <div class="kpi-sub">Women of reproductive age</div>
+    </div>
+    <div class="kpi-card gold">
+      <div class="kpi-icon">🌾</div>
+      <div class="kpi-label">LSFF Programme Coverage</div>
+      <div class="kpi-value" id="kpi2">67%</div>
+      <div class="kpi-delta up" id="kpi2d">↑ 18 pp since 2020</div>
+      <div class="kpi-sub">Population reached via fortified staples</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-icon">✅</div>
+      <div class="kpi-label">Regulatory Compliance</div>
+      <div class="kpi-value" id="kpi3">54%</div>
+      <div class="kpi-delta up" id="kpi3d">↑ 12 pp since 2020</div>
+      <div class="kpi-sub">Products meeting national standards</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-icon">💊</div>
+      <div class="kpi-label">IDA Supplement Dependence</div>
+      <div class="kpi-value" id="kpi4">31%</div>
+      <div class="kpi-delta down" id="kpi4d">↓ 14 pp since 2020</div>
+      <div class="kpi-sub">Population reliant on supplementation only</div>
+    </div>
+  </div>
+
+  <!-- TREND + DONUT -->
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Anaemia Rate vs. LSFF Coverage Over Time</div>
+          <div class="chart-subtitle">Trend lines across all programme regions · 2018–2025</div>
+        </div>
+        <span class="chart-badge badge-teal">Trend</span>
+      </div>
+      <canvas id="trendChart" height="220"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Intervention Mix</div>
+          <div class="chart-subtitle">Share of iron delivery strategy · 2025</div>
+        </div>
+        <span class="chart-badge badge-gold">2025</span>
+      </div>
+      <canvas id="donutChart" height="220"></canvas>
+    </div>
+  </div>
+
+  <!-- 3-COLUMN ROW -->
+  <div class="chart-grid-3">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Regional Anaemia Rates</div>
+          <div class="chart-subtitle">% women of reproductive age · 2025</div>
+        </div>
+      </div>
+      <canvas id="barRegion" height="220"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">LSFF Coverage by Region</div>
+          <div class="chart-subtitle">Population covered · 2020 vs 2025</div>
+        </div>
+      </div>
+      <canvas id="barCoverage" height="220"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Compliance Rate Trend</div>
+          <div class="chart-subtitle">% products meeting standards · all regions</div>
+        </div>
+      </div>
+      <canvas id="complianceChart" height="220"></canvas>
+    </div>
+  </div>
+
+  <!-- REGION TABLE -->
+  <div class="table-card">
+    <div class="chart-header">
+      <div>
+        <div class="chart-title">Regional Programme Scorecard</div>
+        <div class="chart-subtitle">Key metrics by programme region · FY 2025</div>
+      </div>
+      <span class="chart-badge badge-teal">All Regions</span>
+    </div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Region</th>
+          <th>Anaemia Rate</th>
+          <th>Change vs 2020</th>
+          <th>LSFF Coverage</th>
+          <th>Coverage Progress</th>
+          <th>Compliance Rate</th>
+          <th>IDA Supplement Dep.</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="regionTableBody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<div class="footer">
+  Fortify Health — Internal Programme Dashboard · Fictional illustrative data for strategic planning purposes · April 2026
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// DATA
+// ─────────────────────────────────────────────
+const YEARS_ALL = [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025];
+
+const data = {
+  trend: {
+    anaemia:  [50.1, 49.3, 47.6, 45.8, 43.9, 41.7, 39.8, 38.4],
+    coverage: [31,   35,   42,   48,   53,   58,   63,   67],
+    supDep:   [58,   55,   52,   49,   44,   39,   35,   31],
+    compliance:[28,  30,   35,   38,   42,   46,   51,   54],
+  },
+  regions: [
+    { name:"South Asia",        color:"#0D7B6E", anaemia2025:42.1, anaemia2020:51.2, coverage2025:71, coverage2020:45, compliance:58, supDep:28, status:"on-track" },
+    { name:"Sub-Saharan Africa", color:"#C9883B", anaemia2025:46.8, anaemia2020:54.3, coverage2025:52, coverage2020:28, compliance:41, supDep:39, status:"at-risk" },
+    { name:"East Africa",       color:"#2E8B6B", anaemia2025:44.2, anaemia2020:52.1, coverage2025:58, coverage2020:32, compliance:47, supDep:34, status:"on-track" },
+    { name:"West Africa",       color:"#C94B4B", anaemia2025:49.7, anaemia2020:56.8, coverage2025:44, coverage2020:22, compliance:36, supDep:44, status:"critical" },
+    { name:"Southeast Asia",    color:"#5B8DB8", anaemia2025:31.4, anaemia2020:41.7, coverage2025:79, coverage2020:55, compliance:68, supDep:18, status:"on-track" },
+  ],
+  donut2025: {
+    labels:["LSFF (wheat/rice flour)","LSFF (edible oil)","LSFF (condiments/salt)","Supplementation only","No intervention"],
+    values:[34, 18, 15, 20, 13],
+    colors:["#0D7B6E","#12A08F","#5BBFB0","#C9883B","#C94B4B"],
+  },
+  compliance: {
+    "South Asia":        [30,34,38,41,46,50,54,58],
+    "Sub-Saharan Africa":[18,21,24,28,31,34,38,41],
+    "East Africa":       [22,25,29,33,37,40,44,47],
+    "West Africa":       [14,17,19,22,25,28,32,36],
+    "Southeast Asia":    [42,46,50,54,58,61,65,68],
+  }
+};
+
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+let currentRange = 5;
+let currentMetric = 'anaemia';
+let charts = {};
+
+function getYears() {
+  return YEARS_ALL.slice(YEARS_ALL.length - currentRange);
+}
+function sliceSeries(arr) {
+  return arr.slice(arr.length - currentRange);
+}
+
+// ─────────────────────────────────────────────
+// CHART DEFAULTS
+// ─────────────────────────────────────────────
+Chart.defaults.font.family = "'DM Sans', sans-serif";
+Chart.defaults.color = "#6B6B82";
+Chart.defaults.plugins.legend.labels.usePointStyle = true;
+Chart.defaults.plugins.legend.labels.pointStyleWidth = 10;
+Chart.defaults.plugins.tooltip.backgroundColor = "#1A1A2E";
+Chart.defaults.plugins.tooltip.titleColor = "#fff";
+Chart.defaults.plugins.tooltip.bodyColor = "#ccc";
+Chart.defaults.plugins.tooltip.padding = 10;
+Chart.defaults.plugins.tooltip.cornerRadius = 8;
+
+// ─────────────────────────────────────────────
+// TREND CHART
+// ─────────────────────────────────────────────
+function buildTrendChart() {
+  const ctx = document.getElementById('trendChart').getContext('2d');
+  if (charts.trend) charts.trend.destroy();
+  const yrs = getYears();
+  charts.trend = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: yrs,
+      datasets: [
+        {
+          label: 'Anaemia Rate (%)',
+          data: sliceSeries(data.trend.anaemia),
+          borderColor: '#C94B4B',
+          backgroundColor: 'rgba(201,75,75,0.07)',
+          borderWidth: 2.5,
+          tension: 0.4,
+          fill: true,
+          pointRadius: 4,
+          pointBackgroundColor: '#C94B4B',
+          yAxisID: 'y',
+        },
+        {
+          label: 'LSFF Coverage (%)',
+          data: sliceSeries(data.trend.coverage),
+          borderColor: '#0D7B6E',
+          backgroundColor: 'rgba(13,123,110,0.07)',
+          borderWidth: 2.5,
+          tension: 0.4,
+          fill: true,
+          pointRadius: 4,
+          pointBackgroundColor: '#0D7B6E',
+          yAxisID: 'y',
+        },
+        {
+          label: 'Supplement Dependence (%)',
+          data: sliceSeries(data.trend.supDep),
+          borderColor: '#C9883B',
+          backgroundColor: 'rgba(201,136,59,0.05)',
+          borderWidth: 2,
+          tension: 0.4,
+          borderDash: [6,4],
+          fill: false,
+          pointRadius: 3,
+          pointBackgroundColor: '#C9883B',
+          yAxisID: 'y',
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { position: 'bottom' } },
+      scales: {
+        y: {
+          min: 10, max: 75,
+          grid: { color: 'rgba(13,123,110,0.07)' },
+          ticks: { callback: v => v + '%' }
+        },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+}
+
+// ─────────────────────────────────────────────
+// DONUT CHART
+// ─────────────────────────────────────────────
+function buildDonutChart() {
+  const ctx = document.getElementById('donutChart').getContext('2d');
+  if (charts.donut) charts.donut.destroy();
+  charts.donut = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: data.donut2025.labels,
+      datasets: [{
+        data: data.donut2025.values,
+        backgroundColor: data.donut2025.colors,
+        borderWidth: 2,
+        borderColor: '#FDFBF7',
+        hoverBorderWidth: 3,
+      }]
+    },
+    options: {
+      responsive: true,
+      cutout: '68%',
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { font: { size: 11 }, padding: 12 }
+        },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw}%` } }
+      }
+    }
+  });
+}
+
+// ─────────────────────────────────────────────
+// BAR: REGIONAL ANAEMIA
+// ─────────────────────────────────────────────
+function buildBarRegion() {
+  const ctx = document.getElementById('barRegion').getContext('2d');
+  if (charts.barRegion) charts.barRegion.destroy();
+  const names  = data.regions.map(r => r.name.replace('Sub-Saharan ','SS '));
+  const vals25 = data.regions.map(r => r.anaemia2025);
+  const vals20 = data.regions.map(r => r.anaemia2020);
+  charts.barRegion = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: names,
+      datasets: [
+        { label: '2020', data: vals20, backgroundColor: 'rgba(201,75,75,0.25)', borderRadius: 4, borderSkipped: false },
+        { label: '2025', data: vals25, backgroundColor: data.regions.map(r=>r.color), borderRadius: 4, borderSkipped: false },
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } },
+      scales: {
+        y: { max: 65, grid: { color: 'rgba(13,123,110,0.07)' }, ticks: { callback: v => v + '%' } },
+        x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+      }
+    }
+  });
+}
+
+// ─────────────────────────────────────────────
+// BAR: COVERAGE
+// ─────────────────────────────────────────────
+function buildBarCoverage() {
+  const ctx = document.getElementById('barCoverage').getContext('2d');
+  if (charts.barCoverage) charts.barCoverage.destroy();
+  const names = data.regions.map(r => r.name.replace('Sub-Saharan ','SS '));
+  charts.barCoverage = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: names,
+      datasets: [
+        { label: '2020', data: data.regions.map(r=>r.coverage2020), backgroundColor:'rgba(13,123,110,0.2)', borderRadius:4 },
+        { label: '2025', data: data.regions.map(r=>r.coverage2025), backgroundColor: data.regions.map(r=>r.color), borderRadius:4 },
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } },
+      scales: {
+        y: { max: 100, grid: { color: 'rgba(13,123,110,0.07)' }, ticks: { callback: v => v + '%' } },
+        x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+      }
+    }
+  });
+}
+
+// ─────────────────────────────────────────────
+// LINE: COMPLIANCE
+// ─────────────────────────────────────────────
+function buildComplianceChart() {
+  const ctx = document.getElementById('complianceChart').getContext('2d');
+  if (charts.compliance) charts.compliance.destroy();
+  const yrs = getYears();
+  const colors = ['#0D7B6E','#C9883B','#2E8B6B','#C94B4B','#5B8DB8'];
+  const datasets = data.regions.map((r,i) => ({
+    label: r.name.replace('Sub-Saharan ','SS '),
+    data: sliceSeries(data.compliance[r.name]),
+    borderColor: colors[i],
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    tension: 0.4,
+    pointRadius: 3,
+  }));
+  charts.compliance = new Chart(ctx, {
+    type: 'line',
+    data: { labels: yrs, datasets },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 12 } } },
+      scales: {
+        y: { max: 80, grid: { color: 'rgba(13,123,110,0.07)' }, ticks: { callback: v => v + '%' } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+}
+
+// ─────────────────────────────────────────────
+// TABLE
+// ─────────────────────────────────────────────
+function buildTable() {
+  const tbody = document.getElementById('regionTableBody');
+  tbody.innerHTML = '';
+  data.regions.forEach(r => {
+    const change = (r.anaemia2025 - r.anaemia2020).toFixed(1);
+    const changeStr = change < 0 ? `<span style="color:var(--green-soft)">↓ ${Math.abs(change)} pp</span>`
+                                  : `<span style="color:var(--red-soft)">↑ ${change} pp</span>`;
+    const coveragePct = r.coverage2025;
+    const statusTag = r.status === 'on-track'
+      ? `<span class="tag tag-green">On Track</span>`
+      : r.status === 'at-risk'
+      ? `<span class="tag tag-amber">At Risk</span>`
+      : `<span class="tag tag-red">Critical</span>`;
+
+    tbody.innerHTML += `
+      <tr>
+        <td><span class="region-dot" style="background:${r.color}"></span>${r.name}</td>
+        <td><strong>${r.anaemia2025}%</strong></td>
+        <td>${changeStr}</td>
+        <td>${r.coverage2025}%</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="progress-bar-wrap" style="width:80px">
+              <div class="progress-bar-fill" style="width:${coveragePct}%;background:${r.color}"></div>
+            </div>
+            <span style="font-size:0.72rem">${coveragePct}%</span>
+          </div>
+        </td>
+        <td>${r.compliance}%</td>
+        <td>${r.supDep}%</td>
+        <td>${statusTag}</td>
+      </tr>`;
+  });
+}
+
+// ─────────────────────────────────────────────
+// CONTROLS
+// ─────────────────────────────────────────────
+function setRange(n) {
+  currentRange = n;
+  document.querySelectorAll('.ctrl-btn').forEach(b => {
+    if (['3 yr','5 yr','8 yr'].includes(b.textContent)) b.classList.remove('active');
+  });
+  event.target.classList.add('active');
+  buildTrendChart();
+  buildComplianceChart();
+}
+
+function setMetric(m, btn) {
+  currentMetric = m;
+  document.querySelectorAll('.ctrl-btn').forEach(b => {
+    if (['Anaemia Rate','LSFF Coverage','Compliance'].includes(b.textContent)) b.classList.remove('active');
+  });
+  btn.classList.add('active');
+  buildBarRegion();
+  buildBarCoverage();
+}
+
+function updateRegionFocus() {
+  const val = document.getElementById('regionSelect').value;
+  // Highlight chosen region in table
+  const rows = document.querySelectorAll('#regionTableBody tr');
+  rows.forEach(row => {
+    row.style.background = '';
+    if (val !== 'all' && row.textContent.includes(val)) {
+      row.style.background = 'rgba(13,123,110,0.06)';
+    }
+  });
+}
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  buildTrendChart();
+  buildDonutChart();
+  buildBarRegion();
+  buildBarCoverage();
+  buildComplianceChart();
+  buildTable();
+});
+</script>
+</body>
+</html>
